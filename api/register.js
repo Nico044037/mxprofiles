@@ -63,7 +63,27 @@ export default async function handler(req, res) {
     const email = username+"@accounts.mxprofiles.invalid";
     try {
       const authExisting = await authAdmin().getUserByEmail(email);
-      return sendJson(res,409,{error:"An account already exists for this username. Log in to that account instead."});
+      const [profileSnap, moderatorSnap] = await Promise.all([
+        db.doc("profiles/"+authExisting.uid).get(),
+        db.doc("moderators/"+authExisting.uid).get()
+      ]);
+      const hasActiveModeratorRole = moderatorSnap.exists && moderatorSnap.data().active === true;
+
+      // Keep accounts that still have a profile or an active moderator role.
+      // Only remove an orphaned Auth user when its profile and username reservation are both absent.
+      if (profileSnap.exists || hasActiveModeratorRole) {
+        return sendJson(res,409,{error:hasActiveModeratorRole
+          ? "This username belongs to an existing moderator account. Log in instead."
+          : "An account already exists for this username. Log in to that account instead."});
+      }
+
+      const latestReservation = await usernameRef.get();
+      if (latestReservation.exists && String(latestReservation.data()?.uid || "") === authExisting.uid) {
+        return sendJson(res,409,{error:"This username is already reserved. Please try again in a moment."});
+      }
+
+      // The Auth user has no profile, no username reservation, and no moderator role.
+      await authAdmin().deleteUser(authExisting.uid);
     } catch (lookupError) {
       if (lookupError.code !== "auth/user-not-found") throw lookupError;
     }
