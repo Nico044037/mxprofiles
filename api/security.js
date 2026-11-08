@@ -3,6 +3,10 @@ import { authAdmin, dbAdmin, clientIp, ipHash, sendJson, requireModerator, Field
 export default async function handler(req,res) {
   try {
     const db=dbAdmin();
+    if (req.method==="GET" && req.query?.action==="moderator-check") {
+      const moderator=await requireModerator(req);
+      return sendJson(res,200,{isModerator:true});
+    }
     if (req.method==="GET") {
       if (req.query?.action==="ip-bans") {
         const moderator=await requireModerator(req);
