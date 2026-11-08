@@ -8,6 +8,11 @@ export default async function handler(req,res) {
       return sendJson(res,200,{isModerator:true});
     }
     if (req.method==="GET") {
+      if (req.query?.action==="moderators") {
+        await requireModerator(req);
+        const snapshot=await db.collection("moderators").where("active","==",true).get();
+        return sendJson(res,200,{moderators:snapshot.docs.map(d=>d.id)});
+      }
       if (req.query?.action==="ip-bans") {
         const moderator=await requireModerator(req);
         const snapshot=await db.collection("ipBans").get();
@@ -25,6 +30,23 @@ export default async function handler(req,res) {
     if (req.method!=="POST") return sendJson(res,405,{error:"Method not allowed."});
     const moderator=await requireModerator(req);
     const body=req.body||{};
+    if (body.action==="moderator-grant" || body.action==="moderator-revoke") {
+      const uid=String(body.uid||"").trim();
+      if (!/^[A-Za-z0-9_-]{20,128}$/.test(uid)) return sendJson(res,400,{error:"Invalid member ID."});
+      const ownerSnap=await db.doc("usernames/nico").get();
+      if (ownerSnap.exists && ownerSnap.data().uid===uid) return sendJson(res,400,{error:"The owner account cannot be changed."});
+      const profileRef=db.doc("profiles/"+uid);
+      const profile=await profileRef.get();
+      if (!profile.exists) return sendJson(res,404,{error:"Member profile not found."});
+      if (body.action==="moderator-grant") {
+        await db.doc("moderators/"+uid).set({active:true,grantedAt:FieldValue.serverTimestamp(),grantedBy:moderator.uid},{merge:true});
+        await profileRef.set({isModerator:true},{merge:true});
+        return sendJson(res,200,{ok:true,isModerator:true});
+      }
+      await db.doc("moderators/"+uid).delete();
+      await profileRef.set({isModerator:false},{merge:true});
+      return sendJson(res,200,{ok:true,isModerator:false});
+    }
     if (body.action==="registrations") {
       if (typeof body.enabled!=="boolean") return sendJson(res,400,{error:"enabled must be boolean."});
       await db.doc("securitySettings/registration").set({registrationsEnabled:body.enabled,updatedAt:FieldValue.serverTimestamp(),updatedBy:moderator.uid},{merge:true});
