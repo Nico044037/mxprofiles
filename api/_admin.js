@@ -18,8 +18,9 @@ export async function requireModerator(req) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) throw Object.assign(new Error("Authentication required."), { status: 401 });
   const decoded = await authAdmin().verifyIdToken(header.slice(7));
-  // Hard-coded owner account plus database-managed moderators.
-  const isHardcodedOwner = String(decoded.email || "").toLowerCase() === "nico@accounts.mxprofiles.invalid";
+  // Nico is a hard-coded moderator only while the registered nico profile exists.
+  const profile = await dbAdmin().doc("profiles/" + decoded.uid).get();
+  const isHardcodedOwner = String(decoded.email || "").toLowerCase() === "nico@accounts.mxprofiles.invalid" && profile.exists && String(profile.data().username || "").toLowerCase() === "nico";
   const moderator = await dbAdmin().doc("moderators/" + decoded.uid).get();
   if (!isHardcodedOwner && (!moderator.exists || moderator.data().active !== true)) throw Object.assign(new Error("Moderator access required."), { status: 403 });
   return decoded;
