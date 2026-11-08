@@ -7,7 +7,7 @@ service cloud.firestore {
     }
     function isRestricted(uid) {
       return exists(/databases/$(database)/documents/accountStatus/$(uid))
-        && get(/databases/$(database)/documents/accountStatus/$(uid)).data.status in ['banned', 'terminated'];
+        && get(/databases/$(database)/documents/accountStatus/$(uid)).data.status in ['banned', 'terminated', 'deleted'];
     }
     match /profiles/{uid} {
       allow read: if true;
@@ -26,7 +26,7 @@ service cloud.firestore {
         || (isModerator()
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.username == resource.data.username);
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow delete: if (request.auth != null && request.auth.uid == uid) || isModerator();
     }
     match /usernames/{username} {
       allow read: if true;
@@ -34,12 +34,12 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && username.matches('^[a-z0-9_]{1,64}$');
       allow update: if false;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || isModerator();
     }
     match /accountStatus/{uid} {
       allow read: if request.auth != null && (request.auth.uid == uid || isModerator());
       allow create, update: if isModerator()
-        && request.resource.data.status in ['banned', 'terminated']
+        && request.resource.data.status in ['banned', 'terminated', 'deleted']
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 300;
       allow delete: if isModerator();
