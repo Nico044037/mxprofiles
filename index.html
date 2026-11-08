@@ -38,9 +38,22 @@ else{
  let turnstileWidgetId=null,turnstileToken='';let turnstileReady=false;
 async function loadTurnstile(){
  const wrap=$('turnstileWrap');wrap.classList.toggle('hidden',mode!=='signup');if(mode!=='signup')return;
- if(!window.turnstile){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;script.onload=resolve;script.onerror=()=>reject(Error('Could not load CAPTCHA. Check your connection or content blockers.'));document.head.append(script)})}
+ const box=$('turnstileWidget');box.replaceChildren();
+ if(!window.turnstile){
+  await new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+   script.async=true;script.defer=true;
+   script.onload=()=>window.turnstile?resolve():reject(Error('CAPTCHA loaded but its API is unavailable.'));
+   script.onerror=()=>reject(Error('Could not load CAPTCHA. Check your connection or content blockers.'));
+   document.head.append(script);
+  });
+ }
  if(turnstileWidgetId!==null){window.turnstile.remove(turnstileWidgetId);turnstileWidgetId=null}
- turnstileToken='';turnstileWidgetId=window.turnstile.render('#turnstileWidget',{sitekey:'0x4AAAAAAF5EH5RLMfLXh7fj',theme:'dark',callback:t=>{turnstileToken=t},'expired-callback':()=>{turnstileToken=''},'error-callback':()=>{turnstileToken=''}});
+ turnstileToken='';
+ try{
+  turnstileWidgetId=window.turnstile.render(box,{sitekey:'0x4AAAAAAF5EH5RLMfLXh7fj',theme:'dark',callback:t=>{turnstileToken=t;msg('authMessage','CAPTCHA completed. You can create your account.','success')},'expired-callback':()=>{turnstileToken='';msg('authMessage','CAPTCHA expired. Please complete it again.','error')},'error-callback':()=>{turnstileToken='';msg('authMessage','CAPTCHA could not load. Refresh the page and try again.','error')}});
+ }catch(error){msg('authMessage','CAPTCHA error: '+error.message,'error');throw error}
 }
 $('authForm').onsubmit=async e=>{e.preventDefault();msg('authMessage','Please wait…');try{const password=$('password').value;const username=$('username').value.trim().toLowerCase();if(!/^[a-z0-9_]{1,64}$/.test(username))throw Error('Enter a valid username.');if(mode==='signup'){if(!turnstileToken)throw Error('Complete the CAPTCHA first.');const response=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,turnstileToken})});const result=await response.json();if(!response.ok)throw Error(result.error||'Registration failed.');await signInWithCustomToken(auth,result.customToken);history.pushState({},'','/');await route()}else{await signInWithEmailAndPassword(auth,username+'@accounts.mxprofiles.invalid',password);await route()}}catch(err){msg('authMessage',err.message,'error');if(mode==='signup'&&window.turnstile&&turnstileWidgetId!==null){turnstileToken='';window.turnstile.reset(turnstileWidgetId)}}};
  function updatePreview(){if(!$('previewName'))return;const name=$('displayName').value.trim()||'Your name';$('previewName').textContent=name;$('previewBio').textContent=$('bio').value||'Your bio appears here.';$('previewAvatar').textContent=name.charAt(0).toUpperCase();$('previewAvatar').style.backgroundImage=cleanUrl($('avatarUrl').value)?'url("'+cleanUrl($('avatarUrl').value)+'")':'none';$('previewAvatar').style.backgroundSize='cover';$('previewAvatar').style.color='transparent';$('previewAvatar').style.background=$('accent').value;$('previewAvatar').className='avatar'+($('avatarEffect').value==='float'?' floatAvatar':$('avatarEffect').value==='pulse'?' pulseAvatar':'');applyTemplate($('livePreview'),$('profileTemplate').value);$('livePreview').style.backgroundImage=$('backgroundStyle').value==='image'&&cleanUrl($('backgroundUrl').value)?'url("'+cleanUrl($('backgroundUrl').value)+'")':'';$('previewBanner').style.background='transparent';$('previewBanner').className='banner'+($('backgroundStyle').value==='gradient'?' animatedBanner':'');const fake={links:$('linksText').value.split('\n').map(line=>{const parts=line.split('|');return {label:(parts.shift()||'Link').trim(),url:(parts.join('|')||'').trim()}})};renderLinks($('previewLinks'),fake)}['displayName','bio','accent','avatarUrl','avatarEffect','profileTemplate','backgroundStyle','backgroundUrl','linksText'].forEach(id=>$(id).addEventListener('input',updatePreview));['avatarEffect','profileTemplate','backgroundStyle'].forEach(id=>$(id).addEventListener('change',updatePreview));
