@@ -18,8 +18,10 @@ export async function requireModerator(req) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) throw Object.assign(new Error("Authentication required."), { status: 401 });
   const decoded = await authAdmin().verifyIdToken(header.slice(7));
-  const snap = await dbAdmin().doc("usernames/nico").get();
-  if (!snap.exists || snap.data().uid !== decoded.uid) throw Object.assign(new Error("Moderator access required."), { status: 403 });
+  const owner = await dbAdmin().doc("usernames/nico").get();
+  const isOwner = owner.exists && owner.data().uid === decoded.uid;
+  const moderator = await dbAdmin().doc("moderators/" + decoded.uid).get();
+  if (!isOwner && (!moderator.exists || moderator.data().active !== true)) throw Object.assign(new Error("Moderator access required."), { status: 403 });
   return decoded;
 }
 export function clientIp(req) {
