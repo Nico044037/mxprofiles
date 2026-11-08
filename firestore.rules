@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /profiles/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.username is string
+        && request.resource.data.username.matches('^[a-z0-9_]{3,20}$');
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && resource.data.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.username == resource.data.username;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && username.matches('^[a-z0-9_]{3,20}$');
+      allow update, delete: if false;
+    }
+  }
+}
