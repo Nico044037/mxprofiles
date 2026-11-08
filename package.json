@@ -1,0 +1,12 @@
+{
+  "name": "mxprofiles",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}
