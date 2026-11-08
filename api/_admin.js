@@ -18,8 +18,8 @@ export async function requireModerator(req) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) throw Object.assign(new Error("Authentication required."), { status: 401 });
   const decoded = await authAdmin().verifyIdToken(header.slice(7));
-  const owner = await dbAdmin().doc("usernames/nico").get();
-  const isOwner = owner.exists && owner.data().uid === decoded.uid;
+  // The owner identity is tied to the Firebase Auth email, never to a public username or Firestore profile.
+  const isOwner = String(decoded.email || "").toLowerCase() === "nico@accounts.mxprofiles.invalid";
   const moderator = await dbAdmin().doc("moderators/" + decoded.uid).get();
   if (!isOwner && (!moderator.exists || moderator.data().active !== true)) throw Object.assign(new Error("Moderator access required."), { status: 403 });
   return decoded;
