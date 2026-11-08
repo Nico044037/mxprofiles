@@ -4,6 +4,12 @@ export default async function handler(req,res) {
   try {
     const db=dbAdmin();
     if (req.method==="GET") {
+      if (req.query?.action==="ip-bans") {
+        const moderator=await requireModerator(req);
+        const snapshot=await db.collection("ipBans").get();
+        const bans=snapshot.docs.filter(d=>d.data().active!==false).map(d=>({id:d.id,reason:d.data().reason||"Blocked by moderator",updatedAt:d.data().updatedAt?.toDate?.()?.toISOString()||null}));
+        return sendJson(res,200,{bans});
+      }
       const ip=clientIp(req);
       if (ip) {
         const ban=await db.doc("ipBans/"+ipHash(ip)).get();
@@ -25,6 +31,12 @@ export default async function handler(req,res) {
       if (!ip || ip.length>64 || !/^[0-9a-fA-F:.]+$/.test(ip)) return sendJson(res,400,{error:"Enter a valid IPv4 or IPv6 address."});
       const id=ipHash(ip);
       await db.doc("ipBans/"+id).set({active:true,reason:String(body.reason||"Blocked by moderator").slice(0,300),updatedAt:FieldValue.serverTimestamp(),updatedBy:moderator.uid},{merge:true});
+      return sendJson(res,200,{ok:true});
+    }
+    if (body.action==="ip-unban-hash") {
+      const id=String(body.id||"");
+      if (!/^[a-f0-9]{64}$/.test(id)) return sendJson(res,400,{error:"Invalid ban ID."});
+      await db.doc("ipBans/"+id).delete();
       return sendJson(res,200,{ok:true});
     }
     if (body.action==="ip-unban") {
