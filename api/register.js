@@ -40,8 +40,33 @@ export default async function handler(req, res) {
 
     const usernameRef = db.doc("usernames/"+username);
     const existing = await usernameRef.get();
-    if (existing.exists) return sendJson(res,409,{error:"That username is already taken."});
+    if (existing.exists) {
+      const reservedUid = String(existing.data()?.uid || "");
+      let reservationIsValid = false;
+      if (reservedUid) {
+        try {
+          await authAdmin().getUser(reservedUid);
+          reservationIsValid = true;
+        } catch (lookupError) {
+          if (lookupError.code !== "auth/user-not-found") throw lookupError;
+        }
+      }
+      if (reservationIsValid) return sendJson(res,409,{error:"That username is already linked to an existing account. Log in to that account instead."});
+      await db.runTransaction(async tx => {
+        const latest = await tx.get(usernameRef);
+        if (latest.exists && String(latest.data()?.uid || "") === reservedUid) {
+          tx.delete(usernameRef);
+          if (reservedUid) tx.delete(db.doc("profiles/"+reservedUid));
+        }
+      });
+    }
     const email = username+"@accounts.mxprofiles.invalid";
+    try {
+      const authExisting = await authAdmin().getUserByEmail(email);
+      return sendJson(res,409,{error:"An account already exists for this username. Log in to that account instead."});
+    } catch (lookupError) {
+      if (lookupError.code !== "auth/user-not-found") throw lookupError;
+    }
     const created = await authAdmin().createUser({email,password,displayName:username});
     try {
       await db.runTransaction(async tx => {
