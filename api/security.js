@@ -9,7 +9,7 @@ export default async function handler(req,res) {
     }
     if (req.method==="GET") {
       if (req.query?.action==="moderators") {
-        await requireModerator(req);
+        const moderator=await requireModerator(req);
         const snapshot=await db.collection("moderators").where("active","==",true).get();
         const ids=new Set(snapshot.docs.map(d=>d.id));
         if (moderator.email?.toLowerCase()==="nico@accounts.mxprofiles.invalid") ids.add(moderator.uid);
