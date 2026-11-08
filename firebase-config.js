@@ -1,6 +1,6 @@
 // Firebase Web App configuration for MXProfile.
 export const firebaseConfig = {
-  apiKey: "AIzaSyDIVH9ia7RRykHPtHO7JX0KMOgwJF6-DPk",
+  apiKey: "AIzaSyAE0Y_Hi9p5ffxyED-PxEUtFXH2I7A4HtY",
   authDomain: "mxprofiles-c795e.firebaseapp.com",
   projectId: "mxprofiles-c795e",
   storageBucket: "mxprofiles-c795e.firebasestorage.app",
