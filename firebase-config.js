@@ -1,9 +1,10 @@
-// Replace these values with the Firebase Web App config from Project settings > Your apps.
+// Firebase Web App configuration for MXProfile.
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY_HERE",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT_ID.appspot.com",
-  messagingSenderId: "PASTE_MESSAGING_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyDIVH9ia7RRykHPtHO7JX0KMOgwJF6-DPk",
+  authDomain: "mxprofiles-c795e.firebaseapp.com",
+  projectId: "mxprofiles-c795e",
+  storageBucket: "mxprofiles-c795e.firebasestorage.app",
+  messagingSenderId: "62307898300",
+  appId: "1:62307898300:web:593f4ee8090881c44211b9",
+  measurementId: "G-FEPZT0V12F"
 };
