@@ -33,8 +33,7 @@ export default async function handler(req,res) {
     if (body.action==="moderator-grant" || body.action==="moderator-revoke") {
       const uid=String(body.uid||"").trim();
       if (!/^[A-Za-z0-9_-]{20,128}$/.test(uid)) return sendJson(res,400,{error:"Invalid member ID."});
-      const ownerSnap=await db.doc("usernames/nico").get();
-      if (ownerSnap.exists && ownerSnap.data().uid===uid) return sendJson(res,400,{error:"The owner account cannot be changed."});
+      if (uid===moderator.uid) return sendJson(res,400,{error:"You cannot change your own moderator status."});
       const profileRef=db.doc("profiles/"+uid);
       const profile=await profileRef.get();
       if (!profile.exists) return sendJson(res,404,{error:"Member profile not found."});
