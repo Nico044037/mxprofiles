@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isModerator() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usernames/nico).data.uid == request.auth.uid;
+    }
     match /profiles/{uid} {
       allow read: if true;
       allow create: if request.auth != null
@@ -21,6 +25,14 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && username.matches('^[a-z0-9_]{1,64}$');
       allow update, delete: if false;
+    }
+    match /accountStatus/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isModerator());
+      allow create, update: if isModerator()
+        && request.resource.data.status in ['banned', 'terminated']
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 300;
+      allow delete: if isModerator();
     }
   }
 }
